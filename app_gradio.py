@@ -580,5 +580,10 @@ with gr.Blocks(title="Social Media Sentiment Analyzer") as demo:
                  login_username, login_password, login_message]
     )
 
+
 if __name__ == "__main__":
-    demo.launch()
+    port = int(os.environ.get("PORT", 7861))
+    demo.launch(
+        server_name="0.0.0.0",
+        server_port=port
+    )
