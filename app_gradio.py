@@ -13,6 +13,124 @@ from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from textblob import TextBlob
 
+# ---------------------------------------------------------------
+# Color palette — shared by the CSS theme below AND every matplotlib
+# chart in this file, so the UI and the charts stay visually consistent.
+# ---------------------------------------------------------------
+COLOR_NAVY = "#1F3B57"       # primary / headers
+COLOR_BG = "#EAF1F7"         # page background (very light blue/gray)
+COLOR_CARD = "#FFFFFF"       # cards/panels
+COLOR_BLUE = "#2563EB"       # primary buttons / accents
+COLOR_BLUE_HOVER = "#1D4ED8"
+COLOR_POSITIVE = "#16A34A"   # green
+COLOR_NEGATIVE = "#DC2626"   # red
+COLOR_NEUTRAL = "#D97706"    # amber/yellow
+COLOR_BORDER = "#E2E8F0"
+COLOR_SUBJECTIVE = "#2563EB"     # reuse accent blue — distinct from sentiment colors
+COLOR_OBJECTIVE = "#94A3B8"      # neutral slate gray — distinct from sentiment colors
+COLOR_SENTIMENT_MAP = {"Positive": COLOR_POSITIVE, "Negative": COLOR_NEGATIVE, "Neutral": COLOR_NEUTRAL}
+
+CUSTOM_CSS = f"""
+:root {{
+    --color-navy: {COLOR_NAVY};
+    --color-bg: {COLOR_BG};
+    --color-card: {COLOR_CARD};
+    --color-blue: {COLOR_BLUE};
+    --color-blue-hover: {COLOR_BLUE_HOVER};
+    --color-border: {COLOR_BORDER};
+}}
+
+.gradio-container {{
+    background: var(--color-bg) !important;
+}}
+
+/* ---- Header banner ---- */
+#app-header {{
+    background: var(--color-navy) !important;
+    border-radius: 16px !important;
+    padding: 22px 28px !important;
+    margin-bottom: 18px !important;
+    box-shadow: 0 4px 14px rgba(31, 59, 87, 0.20) !important;
+}}
+#app-header h1, #app-header p, #app-header strong, #app-header span {{
+    color: #FFFFFF !important;
+}}
+
+/* ---- Cards / panels: groups & blocks get white bg, rounded corners, subtle shadow ---- */
+.gr-group, .block {{
+    background: var(--color-card) !important;
+    border-radius: 14px !important;
+    border: 1px solid var(--color-border) !important;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06) !important;
+}}
+
+/* ---- Buttons ---- */
+button.primary, .primary {{
+    background: var(--color-blue) !important;
+    border-color: var(--color-blue) !important;
+    color: #FFFFFF !important;
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+}}
+button.primary:hover, .primary:hover {{
+    background: var(--color-blue-hover) !important;
+}}
+button.secondary, .secondary {{
+    border-radius: 10px !important;
+    border-color: var(--color-border) !important;
+    color: var(--color-navy) !important;
+    background: var(--color-card) !important;
+}}
+
+/* ---- Inputs: rounded, subtle border, blue focus ring ---- */
+textarea, input[type=text], input[type=password], input[type=number], .wrap textarea {{
+    border-radius: 10px !important;
+    border: 1px solid var(--color-border) !important;
+}}
+textarea:focus, input:focus {{
+    border-color: var(--color-blue) !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+}}
+
+/* ---- Tabs: cleaner underline style instead of default boxed look ---- */
+.tab-nav {{
+    border-bottom: 1px solid var(--color-border) !important;
+    gap: 4px !important;
+}}
+.tab-nav button {{
+    border-radius: 10px 10px 0 0 !important;
+    color: #64748B !important;
+    font-weight: 500 !important;
+}}
+.tab-nav button.selected {{
+    color: var(--color-navy) !important;
+    border-bottom: 3px solid var(--color-blue) !important;
+    background: var(--color-card) !important;
+}}
+
+/* ---- Login/Sign-up card: styled as its own centered panel ---- */
+#auth-card {{
+    max-width: 460px !important;
+    margin: 32px auto !important;
+    background: var(--color-card) !important;
+    border-radius: 18px !important;
+    border: 1px solid var(--color-border) !important;
+    box-shadow: 0 8px 28px rgba(15, 23, 42, 0.12) !important;
+    padding: 12px !important;
+}}
+#auth-card h1 {{
+    color: var(--color-navy) !important;
+    text-align: center !important;
+}}
+
+/* ---- Welcome bar text ---- */
+#welcome-bar p {{
+    color: var(--color-navy) !important;
+    font-weight: 600 !important;
+    font-size: 1.05em !important;
+}}
+"""
+
 # --- One-time NLTK setup (safe to leave in; skips if already downloaded) ---
 nltk.download('stopwords', quiet=True)
 nltk.download('wordnet', quiet=True)
@@ -180,13 +298,13 @@ def make_explanation_plot(contributions):
         return None
     words = [c[0] for c in contributions][::-1]
     values = [c[1] for c in contributions][::-1]
-    colors = ["#2E8B57" if v > 0 else "#C0392B" for v in values]
+    colors = [COLOR_POSITIVE if v > 0 else COLOR_NEGATIVE for v in values]
 
     fig, ax = plt.subplots(figsize=(5.5, 3.5))
     ax.barh(words, values, color=colors)
-    ax.axvline(0, color="black", linewidth=0.8)
+    ax.axvline(0, color=COLOR_NAVY, linewidth=0.8)
     ax.set_xlabel("Influence on prediction (→ positive)")
-    ax.set_title("Words that most influenced this prediction")
+    ax.set_title("Words that most influenced this prediction", color=COLOR_NAVY)
     fig.tight_layout()
     return fig
 
@@ -239,27 +357,26 @@ def make_dashboard(results_df):
 
     # 1. Sentiment counts
     sent_counts = results_df["predicted_sentiment"].value_counts()
-    color_map = {"Positive": "#2E8B57", "Negative": "#C0392B", "Neutral": "#D4A017"}
-    colors1 = [color_map.get(lbl, "#888888") for lbl in sent_counts.index]
+    colors1 = [COLOR_SENTIMENT_MAP.get(lbl, "#888888") for lbl in sent_counts.index]
     axes[0, 0].bar(sent_counts.index, sent_counts.values, color=colors1)
-    axes[0, 0].set_title(f"Sentiment Distribution (n={len(results_df)})")
+    axes[0, 0].set_title(f"Sentiment Distribution (n={len(results_df)})", color=COLOR_NAVY)
     axes[0, 0].set_ylabel("Number of posts")
     for i, v in enumerate(sent_counts.values):
         axes[0, 0].text(i, v, str(v), ha="center", va="bottom")
 
     # 2. Subjectivity counts
     subj_counts = results_df["subjectivity"].value_counts()
-    colors2 = ["#4A6FA5" if "Subjective" in lbl else "#D4A017" for lbl in subj_counts.index]
+    colors2 = [COLOR_SUBJECTIVE if "Subjective" in lbl else COLOR_OBJECTIVE for lbl in subj_counts.index]
     axes[0, 1].bar(subj_counts.index, subj_counts.values, color=colors2)
-    axes[0, 1].set_title("Subjectivity Distribution")
+    axes[0, 1].set_title("Subjectivity Distribution", color=COLOR_NAVY)
     axes[0, 1].set_ylabel("Number of posts")
     axes[0, 1].tick_params(axis='x', labelrotation=10)
     for i, v in enumerate(subj_counts.values):
         axes[0, 1].text(i, v, str(v), ha="center", va="bottom")
 
     # 3. Confidence distribution
-    axes[1, 0].hist(results_df["confidence_proxy"], bins=10, color="#6C5B7B", edgecolor="white")
-    axes[1, 0].set_title("Confidence Proxy Distribution")
+    axes[1, 0].hist(results_df["confidence_proxy"], bins=10, color=COLOR_BLUE, edgecolor="white")
+    axes[1, 0].set_title("Confidence Proxy Distribution", color=COLOR_NAVY)
     axes[1, 0].set_xlabel("Confidence (0-1)")
     axes[1, 0].set_ylabel("Number of posts")
 
@@ -270,8 +387,8 @@ def make_dashboard(results_df):
     top_words = counter.most_common(10)
     if top_words:
         words, freqs = zip(*top_words[::-1])
-        axes[1, 1].barh(words, freqs, color="#3B6E96")
-        axes[1, 1].set_title("Most Frequent Words (this batch)")
+        axes[1, 1].barh(words, freqs, color=COLOR_NAVY)
+        axes[1, 1].set_title("Most Frequent Words (this batch)", color=COLOR_NAVY)
         axes[1, 1].set_xlabel("Frequency")
     else:
         axes[1, 1].axis("off")
@@ -280,11 +397,12 @@ def make_dashboard(results_df):
     return fig
 
 
-def make_trend_chart(df_in, date_col, results_df):
+def make_trend_chart(dates_raw, results_df):
     try:
-        dates = pd.to_datetime(df_in[date_col], errors="coerce")
+        dates = pd.to_datetime(dates_raw, errors="coerce")
     except Exception:
         return None
+    dates = pd.Series(dates).reset_index(drop=True)
     if dates.isna().all():
         return None
 
@@ -300,11 +418,10 @@ def make_trend_chart(df_in, date_col, results_df):
     daily_pct = daily_counts.div(daily_counts.sum(axis=1), axis=0) * 100
 
     fig, ax = plt.subplots(figsize=(9, 3.5))
-    color_map = {"Positive": "#2E8B57", "Neutral": "#D4A017", "Negative": "#C0392B"}
     for label in ["Positive", "Neutral", "Negative"]:
         if label in daily_pct.columns:
-            ax.plot(daily_pct.index, daily_pct[label], marker="o", label=label, color=color_map[label])
-    ax.set_title("Sentiment Mix Over Time")
+            ax.plot(daily_pct.index, daily_pct[label], marker="o", label=label, color=COLOR_SENTIMENT_MAP[label])
+    ax.set_title("Sentiment Mix Over Time", color=COLOR_NAVY)
     ax.set_ylabel("% of posts")
     ax.set_ylim(0, 100)
     ax.legend()
@@ -313,27 +430,12 @@ def make_trend_chart(df_in, date_col, results_df):
     return fig
 
 
-def run_batch(file_obj, pasted_text):
-    texts = []
-    df_in = None
-    date_col = None
-
-    if file_obj is not None:
-        df_in = pd.read_csv(file_obj.name)
-        text_col = None
-        for col in df_in.columns:
-            if col.strip().lower() == "text":
-                text_col = col
-                break
-        if text_col is None:
-            text_col = df_in.columns[0]
-        texts = df_in[text_col].astype(str).tolist()
-        date_col = find_date_column(df_in)
-    elif pasted_text and pasted_text.strip():
-        texts = [line.strip() for line in pasted_text.split("\n") if line.strip()]
-
+def analyze_texts(texts, dates_raw=None):
+    """Shared core: run the sentiment/subjectivity pipeline over a list of texts
+    and build the dashboard, optional trend chart, and downloadable CSV. Used by
+    both the CSV/paste batch path and the YouTube comments path below."""
     if not texts:
-        return None, None, None, None, "Please upload a CSV or paste at least one line of text."
+        return None, None, None, None, "No text to analyze."
 
     cleaned_texts = [clean_text(t) for t in texts]
     features = vectorizer.transform(cleaned_texts)
@@ -355,8 +457,11 @@ def run_batch(file_obj, pasted_text):
     dashboard_fig = make_dashboard(results_df)
 
     trend_fig = None
-    if df_in is not None and date_col is not None:
-        trend_fig = make_trend_chart(df_in, date_col, results_df)
+    trend_note = ""
+    if dates_raw is not None:
+        trend_fig = make_trend_chart(dates_raw, results_df)
+        if trend_fig is None:
+            trend_note = " (Date information found but not enough distinct dates for a trend chart.)"
 
     # Downloadable CSV (drop the internal cleaned_text helper column)
     export_df = results_df.drop(columns=["cleaned_text"])
@@ -370,11 +475,35 @@ def run_batch(file_obj, pasted_text):
     summary_text = (
         f"Analyzed {len(results_df)} posts — {pos_count} positive, {neu_count} neutral, "
         f"{neg_count} negative ({subj_count} flagged as subjective/opinion-based)."
-    )
-    if trend_fig is None and date_col is not None:
-        summary_text += " (Date column found but not enough distinct dates for a trend chart.)"
+    ) + trend_note
 
     return export_df, dashboard_fig, trend_fig, tmp.name, summary_text
+
+
+def run_batch(file_obj, pasted_text):
+    texts = []
+    dates_raw = None
+
+    if file_obj is not None:
+        df_in = pd.read_csv(file_obj.name)
+        text_col = None
+        for col in df_in.columns:
+            if col.strip().lower() == "text":
+                text_col = col
+                break
+        if text_col is None:
+            text_col = df_in.columns[0]
+        texts = df_in[text_col].astype(str).tolist()
+        date_col = find_date_column(df_in)
+        if date_col is not None:
+            dates_raw = df_in[date_col]
+    elif pasted_text and pasted_text.strip():
+        texts = [line.strip() for line in pasted_text.split("\n") if line.strip()]
+
+    if not texts:
+        return None, None, None, None, "Please upload a CSV or paste at least one line of text."
+
+    return analyze_texts(texts, dates_raw)
 
 
 def clear_batch():
@@ -382,14 +511,121 @@ def clear_batch():
 
 
 # ---------------------------------------------------------------
+# YouTube comments
+# ---------------------------------------------------------------
+def extract_video_id(url_or_id):
+    """Accepts a full YouTube URL (watch, youtu.be, or shorts link) or a bare video ID."""
+    url_or_id = url_or_id.strip()
+    patterns = [
+        r'(?:v=|\/)([0-9A-Za-z_-]{11}).*',   # watch?v=ID or /embed/ID
+        r'youtu\.be\/([0-9A-Za-z_-]{11})',    # youtu.be/ID
+        r'shorts\/([0-9A-Za-z_-]{11})',       # shorts/ID
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, url_or_id)
+        if match:
+            return match.group(1)
+    # Fall back to treating the whole input as a bare video ID
+    if re.fullmatch(r'[0-9A-Za-z_-]{11}', url_or_id):
+        return url_or_id
+    return None
+
+
+def fetch_youtube_comments(video_url_or_id, api_key, max_comments=100):
+    """Fetch top-level comments for a YouTube video via the YouTube Data API v3.
+    Returns (texts, published_dates, error_message). error_message is '' on success."""
+    try:
+        from googleapiclient.discovery import build
+        from googleapiclient.errors import HttpError
+    except ImportError:
+        return [], [], (
+            "The 'google-api-python-client' package isn't installed. "
+            "Run: pip install google-api-python-client"
+        )
+
+    if not api_key or not api_key.strip():
+        return [], [], "Please enter your YouTube Data API key."
+
+    video_id = extract_video_id(video_url_or_id)
+    if video_id is None:
+        return [], [], "Couldn't parse a video ID from that input — paste a full YouTube URL or an 11-character video ID."
+
+    try:
+        youtube = build('youtube', 'v3', developerKey=api_key.strip())
+    except Exception as e:
+        return [], [], f"Could not initialize the YouTube API client: {e}"
+
+    texts, dates = [], []
+    next_page_token = None
+    try:
+        while len(texts) < max_comments:
+            request = youtube.commentThreads().list(
+                part='snippet',
+                videoId=video_id,
+                maxResults=min(100, max_comments - len(texts)),
+                pageToken=next_page_token,
+                textFormat='plainText',
+                order='relevance',
+            )
+            response = request.execute()
+
+            for item in response.get('items', []):
+                snippet = item['snippet']['topLevelComment']['snippet']
+                texts.append(snippet['textDisplay'])
+                dates.append(snippet['publishedAt'])
+
+            next_page_token = response.get('nextPageToken')
+            if not next_page_token:
+                break
+    except HttpError as e:
+        status = getattr(e, 'status_code', None) or getattr(e.resp, 'status', None)
+        if status == 403:
+            return texts, dates, (
+                "YouTube API returned 403 Forbidden — either your API key is invalid/restricted, "
+                "your daily quota is exhausted, or comments are disabled for this video."
+            )
+        if status == 404:
+            return [], [], "Video not found — check the URL/ID is correct and the video is public."
+        return texts, dates, f"YouTube API error: {e}"
+    except Exception as e:
+        return texts, dates, f"Unexpected error while fetching comments: {e}"
+
+    if not texts:
+        return [], [], "No comments were returned — comments may be disabled or the video may have none yet."
+
+    return texts, dates, ""
+
+
+def run_youtube_batch(video_url, api_key, max_comments):
+    max_comments = int(max_comments) if max_comments else 100
+    max_comments = max(1, min(max_comments, 500))  # sane ceiling to protect your daily API quota
+
+    texts, dates, error = fetch_youtube_comments(video_url, api_key, max_comments)
+    if error:
+        return None, None, None, None, error
+
+    export_df, dashboard_fig, trend_fig, csv_path, summary_text = analyze_texts(texts, dates)
+    summary_text = f"Fetched {len(texts)} comments. " + summary_text
+    return export_df, dashboard_fig, trend_fig, csv_path, summary_text
+
+
+def clear_youtube():
+    return "", "", 100, "", None, None, None, None
+
+
+# ---------------------------------------------------------------
 # Interface
 # ---------------------------------------------------------------
-with gr.Blocks(title="Social Media Sentiment Analyzer") as demo:
+with gr.Blocks(
+    title="Social Media Sentiment Analyzer",
+    theme=gr.themes.Soft(primary_hue="blue", neutral_hue="slate"),
+    css=CUSTOM_CSS,
+) as demo:
     logged_in_state = gr.State(False)
     username_state = gr.State("")
 
     # ---------------- Login / Sign Up screen ----------------
-    with gr.Group(visible=True) as auth_section:
+    with gr.Group(visible=True, elem_id="auth-card") as auth_section:
         gr.Markdown("# 💬 Social Media Sentiment Analyzer\nPlease log in or create an account to continue.")
 
         with gr.Tabs():
@@ -409,8 +645,8 @@ with gr.Blocks(title="Social Media Sentiment Analyzer") as demo:
     # ---------------- Main app (hidden until login) ----------------
     with gr.Group(visible=False) as main_app:
         with gr.Row():
-            welcome_text = gr.Markdown("")
-            logout_btn = gr.Button("Log Out", size="sm")
+            welcome_text = gr.Markdown("", elem_id="welcome-bar")
+            logout_btn = gr.Button("Log Out", size="sm", variant="secondary")
 
         gr.Markdown(
             "# 💬 Social Media Sentiment Analyzer\n"
@@ -418,7 +654,8 @@ with gr.Blocks(title="Social Media Sentiment Analyzer") as demo:
             "**positive**, **negative**, or **neutral**, built on a Support Vector Machine trained "
             "with TF-IDF features on the Sentiment140 dataset. Neutral is assigned when the model's "
             "decision score falls within a small margin of its decision boundary — see the footer "
-            "for details."
+            "for details.",
+            elem_id="app-header"
         )
 
         with gr.Tabs():
@@ -502,6 +739,52 @@ with gr.Blocks(title="Social Media Sentiment Analyzer") as demo:
                     fn=clear_batch,
                     inputs=None,
                     outputs=[csv_input, batch_text_input, batch_table, batch_dashboard, batch_trend, batch_download, batch_summary]
+                )
+
+            # ---------------- Tab 3: YouTube comments ----------------
+            with gr.Tab("YouTube Comments"):
+                gr.Markdown(
+                    "Analyze sentiment across a YouTube video's comments. Requires a YouTube Data "
+                    "API v3 key — get one free from [Google Cloud Console](https://console.cloud.google.com/apis/credentials) "
+                    "(enable the 'YouTube Data API v3' first). Your key is used only for this request "
+                    "and is never saved to disk."
+                )
+                with gr.Row():
+                    with gr.Column():
+                        yt_url_input = gr.Textbox(
+                            label="YouTube video URL or video ID",
+                            placeholder="e.g. https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+                        )
+                        yt_api_key_input = gr.Textbox(
+                            label="YouTube Data API key",
+                            type="password",
+                            value=os.environ.get("YOUTUBE_API_KEY", ""),
+                            placeholder="Paste your API key here"
+                        )
+                        yt_max_comments = gr.Number(
+                            label="Max comments to fetch (capped at 500 to protect your API quota)",
+                            value=100, precision=0
+                        )
+                        with gr.Row():
+                            yt_btn = gr.Button("Fetch & Analyze Comments", variant="primary")
+                            yt_clear_btn = gr.Button("Clear")
+                        yt_summary = gr.Textbox(label="Summary", interactive=False)
+
+                yt_dashboard = gr.Plot(label="Comment Sentiment Dashboard")
+                yt_trend = gr.Plot(label="Sentiment Over Time (based on comment post dates)")
+                yt_table = gr.Dataframe(label="Results", wrap=True)
+                yt_download = gr.File(label="Download results as CSV")
+
+                yt_btn.click(
+                    fn=run_youtube_batch,
+                    inputs=[yt_url_input, yt_api_key_input, yt_max_comments],
+                    outputs=[yt_table, yt_dashboard, yt_trend, yt_download, yt_summary]
+                )
+                yt_clear_btn.click(
+                    fn=clear_youtube,
+                    inputs=None,
+                    outputs=[yt_url_input, yt_api_key_input, yt_max_comments, yt_summary,
+                             yt_table, yt_dashboard, yt_trend, yt_download]
                 )
 
         gr.Markdown(
